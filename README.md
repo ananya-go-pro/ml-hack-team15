@@ -39,10 +39,6 @@ python hmm_decoding/run_hmm_experiments.py --model tuned
 # 6. Error analysis and accuracy ladder (about 10 min)
 python experiments/error_analysis.py
 python experiments/accuracy_ladder.py
-
-# 7. Report PDF (headless Chrome)
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer \
-  --print-to-pdf=report/PathSnap_Technical_Report_Team15.pdf report/report.html
 ```
 
 The notebooks can also be opened in Jupyter and run top to bottom.
