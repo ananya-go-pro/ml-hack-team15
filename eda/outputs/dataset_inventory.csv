@@ -1,0 +1,3 @@
+partition,num_trips,total_gps_points,avg_gps_points,min_gps_points,max_gps_points,avg_duration_sec,avg_nodes,avg_arcs,total_missing_values,total_invalid_refs
+student_test,10,19160,1916.0,262,3958,2025.0,9068.9,18504.1,0,0
+train,80,208417,2605.21,361,19313,5680.4,24168.56,48461.3,0,0
