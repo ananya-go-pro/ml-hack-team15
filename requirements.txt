@@ -8,5 +8,7 @@ folium>=0.17
 networkx>=3.3
 joblib>=1.4
 optuna>=4.0
+fastapi>=0.110
+uvicorn>=0.29
 jupyter
 nbconvert
