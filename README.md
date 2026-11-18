@@ -1,69 +1,22 @@
 # PathSnap: Distributed Map-Matching & Route Reconstruction
-**Team 15** | PES University — Machine Learning Hackathon (UE24CS352A)
 
-PathSnap matches noisy GPS observations to a road network and reconstructs the route a vehicle actually drove.
+## Installation
 
-## Repository layout
-
-```
-data/processed/                 cleaned data (output of preprocessing)
-  train/<trip>_{track,nodes,arcs,route}.csv          80 trips
-  student_test/<trip>_{track,nodes,arcs,route}.csv   10 trips
-  preprocessing_summary.csv
-preprocessing/
-  inspect_dataset.py            raw file counts / sample contents
-  preprocess.py                 raw -> cleaned CSVs (both partitions)
-  validate_data.py              checks every cleaned CSV
-eda/
-  eda.ipynb                     dataset exploration, anomaly register, plots, Folium map
-  outputs/                      EDA tables, plots, interactive map
-feature_engineering/            per-trip GPS features, road graph, candidate generation, maps
-model_comparison/
-  model_comparison.ipynb        labelling, candidate features, 5-model comparison and selection
-  outputs/                      comparison tables, fold logs, configs, plots, Folium map
-pathsnap/                       shared code used by every script below (and later by the API)
-  data.py                       loading cleaned trips, local metric projection
-  candidates.py                 reference labelling, candidate generation, candidate features
-  hmm.py                        HMM emissions/transitions + Viterbi decoding
-  raw.py                        raw trip-folder reader (prediction inputs and .route loaded separately)
-  inference.py                  MapMatcher: features -> tuned LightGBM -> HMM for one trip (no labels)
-api/
-  main.py                       FastAPI backend for Laptop 1 (/health, /trips, /predict)
-  evaluation.py                 server-side accuracy; the only code that reads .route
-ui/
-  index.html, app.js, style.css evaluator interface (Leaflet map) for Laptop 2
-  serve.py                      tiny standard-library server for the UI
-  metrics.py, dataset.py        Top-1 / continuity / route metrics, cached partition builder
-hpo/
-  bayes_opt_lightgbm.py         Bayesian (Optuna TPE) tuning of the selected LightGBM
-  outputs/                      all trials, best params, tuned-vs-untuned table, plots
-hmm_decoding/
-  run_hmm_experiments.py        decoder tuning on training OOF, classifier vs classifier+HMM, Folium maps
-  outputs/                      comparison tables, per-trip results, hmm_config.json, maps/
-experiments/
-  README.md                     accuracy log: every change we tried and why it was kept or rejected
-  error_analysis.py             error categories on training out-of-fold predictions
-  accuracy_ladder.py            re-runs every experiment step on the same partitions
-  outputs/
-models/
-  selected_untuned_model.joblib selected candidate classifier (before Bayesian tuning)
-  tuned_lightgbm.joblib         Bayesian-tuned LightGBM used by the final pipeline
-report/
-  report.html                   technical report source (figures are read from the output folders)
-  PathSnap_Technical_Report_Team15.pdf
-```
-
-## Setup
+Requires Python 3 and pip.
 
 ```bash
+git clone https://github.com/ananya-go-pro/ml-hack-team15.git
+cd ml-hack-team15
 pip install -r requirements.txt
 ```
 
-The raw dataset is **not** committed. Place it so that it contains `train/` and `student_test/`. Any of these locations is found automatically: `data/raw/`, `data/raw/Student folder/`, `Student folder/` in the repo, or `../Student folder/` next to the repo. You can also point to it with `export PATHSNAP_DATA=/path/to/folder`. The evaluator-testing partition is never read by any script or notebook.
+The raw dataset is not committed. Place the folder containing `train/` and `student_test/` in one of these
+locations: `data/raw/`, `data/raw/Student folder/`, `Student folder/` inside the repository, or `../Student folder/`
+next to it. Alternatively, set `export PATHSNAP_DATA=/path/to/folder`.
 
-## Running the pipeline
+## Execution
 
-Run these from the repository root:
+Run from the repository root, in this order:
 
 ```bash
 # 1. Preprocessing: raw -> data/processed/
@@ -71,23 +24,19 @@ python preprocessing/inspect_dataset.py
 python preprocessing/preprocess.py
 python preprocessing/validate_data.py
 
-# 2. Exploratory data analysis (reads raw data)
+# 2. Exploratory data analysis
 jupyter nbconvert --to notebook --execute --inplace eda/eda.ipynb
 
-# 3. Model comparison (reads data/processed/ only)
+# 3. Model comparison (about 6 min)
 jupyter nbconvert --to notebook --execute --inplace model_comparison/model_comparison.ipynb
-```
 
-You can also open the notebooks in Jupyter and run them top to bottom. The model comparison writes a local feature cache to `cache/` (git-ignored) and takes about 6 minutes on a laptop.
-
-```bash
-# 4. Bayesian hyperparameter optimisation (~8 min, writes models/tuned_lightgbm.joblib)
+# 4. Bayesian hyperparameter optimisation (about 8 min, writes models/tuned_lightgbm.joblib)
 python hpo/bayes_opt_lightgbm.py --trials 40
 
-# 5. HMM / Viterbi route reconstruction (~4 min, writes hmm_config.json and Folium maps)
+# 5. HMM / Viterbi route reconstruction (about 4 min, writes hmm_decoding/outputs/hmm_config.json and maps)
 python hmm_decoding/run_hmm_experiments.py --model tuned
 
-# 6. Documentation of every accuracy step (~10 min)
+# 6. Error analysis and accuracy ladder (about 10 min)
 python experiments/error_analysis.py
 python experiments/accuracy_ladder.py
 
@@ -96,100 +45,34 @@ python experiments/accuracy_ladder.py
   --print-to-pdf=report/PathSnap_Technical_Report_Team15.pdf report/report.html
 ```
 
-## Model comparison
+The notebooks can also be opened in Jupyter and run top to bottom.
 
-Each GPS observation (sampled every 5 s) gets candidate road arcs within 50 m. Each (observation, candidate) pair is labelled 1 if it is the reference arc. The labels come from a monotone alignment of the GPS track to `.route`.
+## Deployment
 
-Five classifiers from different families are compared with 5-fold `GroupKFold` cross-validation (grouped by trip) on the training trips, then evaluated on the student-test trips:
+Both laptops must be on the same network, with the repository cloned on each.
 
-- Logistic Regression
-- distance-weighted KNN
-- Random Forest
-- LightGBM
-- MLP
-
-The primary metric is observation-level Top-1 accuracy. Macro F1, log loss, route continuity and timing are also reported. Training trips whose reference route does not match the GPS track (median distance > 50 m) are excluded from fitting; see `model_comparison/outputs/excluded_trips.json`.
-
-## Deployment (two laptops)
-
-Both laptops must be on the same network. Clone the repository on both.
-
-**Laptop 1: API.** Needs Python and `pip install -r requirements.txt`. Put the evaluation trips in one folder
-(one sub-folder per trip with `.track`, `.nodes`, `.arcs`, `.route`) and start the API:
+**Laptop 1 (API).** Install the requirements, put the evaluation trips in one folder (one sub-folder per trip with
+`.track`, `.nodes`, `.arcs`, `.route`) and start the API:
 
 ```bash
 python api/main.py --trips-dir /path/to/evaluator_test --host 0.0.0.0 --port 8000
 ```
 
-Find its IP address (`ipconfig getifaddr en0` on macOS, `ipconfig` on Windows, `hostname -I` on Linux) and allow
-incoming connections on port 8000 if the firewall asks. Keep this terminal visible: every request is logged there
-step by step (files loaded, candidates, classifier, HMM, server-side accuracy, total time).
+Find the laptop's IP address (`ipconfig getifaddr en0` on macOS, `ipconfig` on Windows, `hostname -I` on Linux) and
+allow incoming connections on port 8000 if the firewall asks. Requests are logged in this terminal.
 
-**Laptop 2: UI.** Needs only Python 3 (no packages) and a browser with internet access for the map tiles.
+**Laptop 2 (UI).** Requires only Python 3 and a browser with internet access (for map tiles):
 
 ```bash
 python ui/serve.py --api http://<laptop-1-ip>:8000
 ```
 
-This opens `http://localhost:8501`. The page lists the trips served by the API; click one to run it. The API address
-can also be changed in the page, or passed as `http://localhost:8501/?api=http://<ip>:8000`.
+This opens `http://localhost:8501`. Select a trip to run it. The API address can also be changed on the page or
+passed as `http://localhost:8501/?api=http://<laptop-1-ip>:8000`.
 
-**Quick check on one laptop** (uses the student-test trips, never the evaluator trips):
+**Single-laptop check** using the student-test trips:
 
 ```bash
 python api/main.py --trips-dir "../Student folder/student_test" --port 8000
 python ui/serve.py --api http://localhost:8000
 ```
-
-Served on the 10 student-test trips, the API reproduces the offline results exactly (pooled Top-1 3,676 / 3,836 =
-0.9583, identical per trip), at 0.03–0.6 s per request.
-
-**What the client receives:** GPS observations, the predicted arc per observation, the predicted route geometry,
-the classifier-only route, aggregate accuracy numbers and timings. The reference route, its geometry and
-per-observation correctness stay on Laptop 1.
-
-## Results so far (student-testing trips, 3,836 observations)
-
-| Pipeline | Top-1 | Route continuity | Worst trip |
-|---|---|---|---|
-| Nearest arc (no learning) | 0.5360 | 0.9077 | – |
-| Untuned LightGBM, classifier only | 0.8879 | 0.9587 | 0.7356 |
-| Bayesian-tuned LightGBM, classifier only | 0.8853 | 0.9587 | 0.7254 |
-| **Tuned LightGBM + HMM / Viterbi (final)** | **0.9583** | **0.9775** | **0.8896** |
-
-All decisions (features, model, hyperparameters, decoder parameters) were made on out-of-fold predictions over the
-training trips. The step-by-step log, including the ideas that did not work, is in `experiments/README.md`.
-Student-test numbers are development-stage estimates on 10 trips, so expect roughly ±1 point on unseen trips.
-
-## Progress against the hackathon work process
-
-| # | Stage | Status |
-|---|---|---|
-| 1–2 | Understand the problem, explore the raw dataset | done (`eda/`) |
-| 3 | Data processing and feature engineering | done (`preprocessing/`, `feature_engineering/`, `pathsnap/candidates.py`) |
-| 4–5 | Train and compare 5 models, select one | done (`model_comparison/`), LightGBM selected |
-| 6 | Bayesian hyperparameter optimisation | done (`hpo/`) |
-| 7 | HMM and Viterbi route reconstruction | done (`pathsnap/hmm.py`, `hmm_decoding/`) |
-| 8 | Export model and artifacts | done: `models/tuned_lightgbm.joblib`, `hmm_decoding/outputs/hmm_config.json` |
-| 9 | FastAPI backend (Laptop 1) | done (`api/`) |
-| 10 | Evaluator UI (Laptop 2) | done (`ui/`) |
-| 11 | Integration test | done on one laptop with student-test trips; **two-laptop rehearsal still to do** |
-| 12 | Technical report | done in `report/`; replace the section 7 development screenshots with two-laptop ones |
-
-## Academic integrity and AI use
-
-* **Data partitions.** Only `train` (80 trips) and `student_test` (10 trips) are read by any code in this repository.
-  The evaluator-testing partition is never loaded. Its ground truth must stay server-side and will only be used inside
-  the API (`api/evaluation.py`) to compute accuracy after prediction, never as model input, and is never sent to the UI.
-  During development the API was only ever pointed at the student-test folder.
-* **No selection on test data.** Features, models, hyperparameters and HMM parameters were all chosen using
-  group-aware cross-validation / out-of-fold predictions on the training trips. Student-test results are reported
-  but did not decide anything; `experiments/README.md` lists one case (E3b) where a change scored higher on
-  student-test and was still rejected for that reason.
-* **No hardcoding.** No predictions, routes or trip-specific rules are hardcoded anywhere. Two training trips whose
-  reference route does not match their GPS track are excluded from fitting by a rule computed on training data
-  (`model_comparison/outputs/excluded_trips.json`).
-* **AI assistance.** The team used an AI coding assistant (Claude) during development to help write and refactor
-  code (the shared `pathsnap/` package, the HPO, HMM and experiment scripts), to analyse errors and to draft report
-  text. Every experiment was actually run, every number in the report comes from the output files in this
-  repository, and the team has reviewed the code and results and is able to explain them.
