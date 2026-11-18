@@ -1,0 +1,70 @@
+{
+  "sampler": "TPESampler(seed=42)",
+  "objective": "mean 5-fold GroupKFold CV observation-level Top-1",
+  "n_trials": 40,
+  "total_seconds": 434.20804062485695,
+  "search_space": {
+    "n_estimators": [
+      "int_log",
+      100,
+      1500
+    ],
+    "learning_rate": [
+      "float_log",
+      0.01,
+      0.2
+    ],
+    "num_leaves": [
+      "int_log",
+      15,
+      255
+    ],
+    "min_child_samples": [
+      "int_log",
+      5,
+      300
+    ],
+    "subsample": [
+      "float",
+      0.5,
+      1.0
+    ],
+    "colsample_bytree": [
+      "float",
+      0.4,
+      1.0
+    ],
+    "reg_lambda": [
+      "float_log",
+      0.001,
+      10.0
+    ],
+    "reg_alpha": [
+      "float_log",
+      0.001,
+      10.0
+    ]
+  },
+  "untuned": {
+    "n_estimators": 400,
+    "learning_rate": 0.05,
+    "num_leaves": 31,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "min_child_samples": 20,
+    "reg_lambda": 0.0,
+    "reg_alpha": 0.0
+  },
+  "best_params": {
+    "n_estimators": 255,
+    "learning_rate": 0.04982127381411854,
+    "num_leaves": 31,
+    "min_child_samples": 247,
+    "subsample": 0.8778041025524723,
+    "colsample_bytree": 0.41036700341217436,
+    "reg_lambda": 0.0035622294394951097,
+    "reg_alpha": 0.011717954638497985
+  },
+  "best_cv_top1": 0.8775189653648597
+}
