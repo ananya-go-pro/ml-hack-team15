@@ -1,0 +1,16 @@
+{
+  "hmm": {
+    "beta": 2.0,
+    "w_emit": 1.0,
+    "p_floor": 0.0001,
+    "back_tol": 15.0,
+    "gap_dt": 120.0,
+    "gap_dist": 2000.0,
+    "search_extra": 400.0,
+    "signed_back": false
+  },
+  "chosen_on": "training OOF Top-1 (5-fold GroupKFold)",
+  "classifier": "tuned",
+  "train_oof_classifier_top1": 0.8794743872849704,
+  "train_oof_hmm_top1": 0.9309997001172269
+}
