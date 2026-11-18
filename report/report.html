@@ -499,12 +499,51 @@ trip is shown below.</p>
 <!-- ====================================================================================== -->
 <h2 class="pb">7. API, UI and Deployment</h2>
 
-<p class="note"><b>Still in progress at the time of writing.</b> The FastAPI backend (Laptop 1) and the evaluator UI
-(Laptop 2) are not built yet. The inference parts they will use are ready. <code>pathsnap/candidates.py</code>
-computes the features from the raw files without labels, <code>models/tuned_lightgbm.joblib</code> is the tuned
-classifier, <code>pathsnap/hmm.py</code> does the decoding, and <code>hmm_decoding/outputs/hmm_config.json</code>
-holds the decoder settings. Screenshots of the working UI and of the API logs on the receiving laptop will be added
-here once they are done.</p>
+<p>The final system runs on two laptops. Laptop 1 runs the FastAPI backend in <code>api/main.py</code>. It loads the
+tuned LightGBM model and the HMM settings once when it starts, and it reads the trips from a folder that is given on
+the command line. Laptop 2 runs the evaluator interface in <code>ui/</code>, which is a single web page with a
+Leaflet map and a very small Python server that only uses the standard library, so nothing has to be installed on
+the second laptop. The page asks the API for the list of trips, shows them as ten buttons, and when the evaluator
+clicks one it sends only the trip id to the API.</p>
+
+<p>The API has three endpoints. <code>GET /health</code> reports the model, the decoder settings and the number of
+trips. <code>GET /trips</code> lists the trip ids with their number of GPS fixes. <code>POST /predict</code> runs the
+whole pipeline on one trip. It reads the GPS track and the road network, cleans the track in the same way as our
+preprocessing script, builds the candidate features, scores them with LightGBM and decodes the route with the HMM.
+Only after the prediction is finished does a separate module, <code>api/evaluation.py</code>, read the reference
+route and compute the accuracy. The response contains the GPS observations, the predicted arc for every
+observation, the geometry of the predicted route, the classifier-only route for comparison, the accuracy numbers and
+the time taken by each step. It does not contain the reference route, its geometry or which single observations were
+right or wrong, so the ground truth never leaves Laptop 1. The prediction code cannot see it either, because the
+function that loads the prediction inputs never opens the <code>.route</code> file. Every request is written to the
+console of Laptop 1 step by step, so the evaluator can watch the request arrive and the pipeline run.</p>
+
+<p>Before connecting the interface, we checked that the API gives exactly the same answers as our offline
+experiments. We pointed it at the raw student-testing folder and called <code>/predict</code> for all ten trips over
+HTTP. Every trip matched the offline per-trip Top-1 to the last decimal place, both with and without the HMM, and the
+pooled result was 3,676 correct observations out of 3,836, which is the same 95.83 percent as in section 5. Each
+request took between 0.03 and 0.6 seconds. We also checked that an unknown trip id or a path like
+<code>../train/00000001</code> is refused with a 404 error, and that the interface shows a clear message when the API
+cannot be reached. During development the API was never pointed at the evaluator-testing folder.</p>
+
+<figure><img src="figures/ui_student_test_00000077.png">
+<figcaption>Figure 17. The evaluator interface after selecting a trip. Development run on one laptop with the API
+serving the ten student-testing trips (trip 00000077 shown). The final screenshots from the two-laptop setup with the
+evaluator trips will replace this figure.</figcaption></figure>
+
+<pre style="font-family:Menlo,monospace;font-size:7.6pt;line-height:1.45;background:#f6f6f6;border:1px solid #ddd;padding:8px;white-space:pre-wrap;page-break-inside:avoid">14:34:49 | INFO | Loaded model &#x27;LightGBM (tuned)&#x27; (17 features) and HMM config beta=2.0 w_emit=1.0 in 0.06s
+14:34:49 | INFO | Trips folder: ../Student folder/student_test -&gt; 10 trips: 00000000, 00000007, 00000009, 00000040, 00000052, 00000056, 00000065, 00000076, 00000077, 00000091
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+...
+14:35:03 | INFO | === /predict trip 00000077 requested by 127.0.0.1
+14:35:03 | INFO | [00000077] loaded 3911 GPS fixes, 4424 nodes, 9622 arcs (0.01s)
+14:35:03 | INFO | [00000077] 783 observations, 7404 candidate rows (features 0.03s)
+14:35:03 | INFO | [00000077] classifier 0.021s | HMM/Viterbi 0.11s, 0 chain restarts
+14:35:03 | INFO | [00000077] server-side evaluation: Top-1 HMM 0.9272 | classifier-only 0.7254 | continuity 1.0000 (0.06s)
+14:35:03 | INFO | [00000077] done in 0.24s -&gt; 200 OK
+INFO:     127.0.0.1:61364 - &quot;POST /predict HTTP/1.1&quot; 200 OK</pre>
+<p class="note">Figure 18. Console log of the API for the same request (development run, student-testing trips). The final
+report will show this log on the CMD of Laptop 1 during the two-laptop run.</p>
 
 <!-- ====================================================================================== -->
 <h2>Conclusion</h2>
