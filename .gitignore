@@ -6,25 +6,32 @@ __pycache__/
 # C extensions
 *.so
 
-# Distribution / packaging
+# Distribution / packaging / environments
 .Python
 env/
 venv/
 ENV/
+.venv/
 
-# Large raw datasets
+# Raw datasets (never committed)
 Student folder/
+evaluator_test/
+data/raw/
 *.track
 *.nodes
 *.arcs
 
-# IDEs
+# Local caches and scratch outputs
+cache/
+results/
+visualizations/
+.ipynb_checkpoints/
+
+# IDEs / OS
 .vscode/
 .idea/
 .gemini/
+.DS_Store
 
 # PathSnap local backup
 PathSnap_processed_backup.zip
-
-# Ignore raw data folder
-data/raw/

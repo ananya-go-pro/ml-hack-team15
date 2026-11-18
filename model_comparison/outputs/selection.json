@@ -1,0 +1,30 @@
+{
+  "selected": "LightGBM",
+  "rule": "max CV Top-1; models within 1 std of paired per-fold difference are tied -> min CV log loss -> faster inference",
+  "cv": {
+    "cv_macro_f1": 0.9276493695468975,
+    "cv_macro_f1_std": 0.028437940958729584,
+    "cv_top1": 0.8744499121534398,
+    "cv_top1_std": 0.05511747372213575,
+    "cv_log_loss": 0.08493375450726133,
+    "fit_s_per_fold": 2.778977908194065
+  },
+  "student_test": {
+    "fit_s_full": 3.1980730830691755,
+    "inference_s": 0.09693458303809166,
+    "inference_ms_per_1k_rows": 3.284581967948349,
+    "train_macro_f1": 0.9557127959433127,
+    "train_top1": 0.9320304818092429,
+    "test_accuracy": 0.969266738953646,
+    "test_precision": 0.8863335976738038,
+    "test_recall": 0.8754569190600522,
+    "test_f1_pos": 0.8808616839616445,
+    "test_macro_f1": 0.9316097725598813,
+    "test_log_loss": 0.07232632281269927,
+    "test_top1": 0.8879040667361835,
+    "test_top1_covered": 0.8879040667361835,
+    "test_top1_trip_mean": 0.9021996406600005,
+    "test_top1_trip_min": 0.735632183908046,
+    "test_route_continuity": 0.9587036069001568
+  }
+}
