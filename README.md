@@ -10,10 +10,6 @@ cd ml-hack-team15
 pip install -r requirements.txt
 ```
 
-The raw dataset is not committed. Place the folder containing `train/` and `student_test/` in one of these
-locations: `data/raw/`, `data/raw/Student folder/`, `Student folder/` inside the repository, or `../Student folder/`
-next to it. Alternatively, set `export PATHSNAP_DATA=/path/to/folder`.
-
 ## Execution
 
 Run from the repository root, in this order:
@@ -69,6 +65,6 @@ passed as `http://localhost:8501/?api=http://<laptop-1-ip>:8000`.
 **Single-laptop check** using the student-test trips:
 
 ```bash
-python api/main.py --trips-dir "../Student folder/student_test" --port 8000
+python api/main.py --trips-dir "Student folder/student_test" --port 8000
 python ui/serve.py --api http://localhost:8000
 ```

@@ -13,13 +13,9 @@ venv/
 ENV/
 .venv/
 
-# Raw datasets (never committed)
-Student folder/
+# Evaluator-testing partition (kept off the public repo; copy to Laptop 1 separately)
 evaluator_test/
 data/raw/
-*.track
-*.nodes
-*.arcs
 
 # Local caches and scratch outputs
 cache/
