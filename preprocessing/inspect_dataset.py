@@ -1,9 +1,16 @@
 
+import sys
 from pathlib import Path
 from collections import Counter
 
-# Dataset folder
-DATA_DIR = Path("data/raw")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from preprocess import find_raw_dir
+
+# Dataset folder (located automatically; set PATHSNAP_DATA to override)
+try:
+    DATA_DIR = find_raw_dir()
+except FileNotFoundError:
+    DATA_DIR = Path("data/raw")
 
 print("=" * 55)
 print("          PATHSNAP DATASET INSPECTION")
@@ -11,7 +18,7 @@ print("=" * 55)
 
 # Check whether dataset folder exists
 if not DATA_DIR.exists():
-    print("\nERROR: data/raw folder not found!")
+    print("\nERROR: raw data folder not found! Set PATHSNAP_DATA.")
     print("Please check whether the ZIP was extracted correctly.")
     exit()
 

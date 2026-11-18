@@ -2,7 +2,9 @@
 from pathlib import Path
 import pandas as pd
 
-DATA_DIR = Path("data/processed")
+# Run from the repository root:  python preprocessing/validate_data.py
+DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
+PARTITIONS = ["train", "student_test"]
 
 print("=" * 55)
 print("       PATHSNAP DETAILED DATA VALIDATION")
@@ -31,16 +33,17 @@ if not summary_file.exists():
 summary = pd.read_csv(summary_file, dtype={"trip_id": str})
 
 print("\n1. SUMMARY VALIDATION")
-print("Total training trips:", len(summary))
+print("Trips per partition:", summary["partition"].value_counts().to_dict())
 print("Missing summary values:", summary.isnull().sum().sum())
 print("Duplicate trip IDs:", summary["trip_id"].duplicated().sum())
+expected_total = 4 * len(summary)
 
 # Check all processed CSV files
 print("\n2. CHECKING PROCESSED CSV FILES")
 
 for file_type, columns in expected_columns.items():
 
-    files = sorted(DATA_DIR.glob(f"*_{file_type}.csv"))
+    files = sorted(f for part in PARTITIONS for f in (DATA_DIR / part).glob(f"*_{file_type}.csv"))
 
     print(f"\nChecking {file_type}: {len(files)} files")
 
@@ -115,9 +118,9 @@ if (
     and not empty_files
     and not missing_value_files
     and not non_numeric_files
-    and total_files == 320
+    and total_files == expected_total
 ):
-    print("\nSUCCESS: ALL 320 CSV FILES PASSED VALIDATION!")
+    print(f"\nSUCCESS: ALL {expected_total} CSV FILES PASSED VALIDATION!")
 else:
     print("\nWARNING: SOME VALIDATION CHECKS FAILED.")
 
