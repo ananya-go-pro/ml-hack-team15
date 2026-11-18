@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PathSnap Evaluator</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside id="side">
+  <header>
+    <h1>PathSnap</h1>
+    <div class="tag">Team 15 · Map-matching evaluator</div>
+  </header>
+
+  <section class="card">
+    <div class="row">
+      <span id="api-dot" class="dot"></span>
+      <span id="api-status">Connecting to API…</span>
+    </div>
+    <div class="row small">
+      <input id="api-url" spellcheck="false" aria-label="API URL">
+      <button id="api-save" class="ghost">Connect</button>
+    </div>
+    <div id="api-model" class="small muted"></div>
+  </section>
+
+  <section class="card">
+    <h2>Evaluation trips</h2>
+    <div id="trips" class="trips"><div class="muted small">Waiting for the API…</div></div>
+  </section>
+
+  <section class="card" id="results" hidden>
+    <h2>Trip <span id="r-trip"></span></h2>
+    <div class="big">
+      <div><div class="label">Top-1 accuracy (HMM)</div><div id="m-top1" class="value"></div></div>
+      <div><div class="label">Classifier only</div><div id="m-clf" class="value sub"></div></div>
+    </div>
+    <table class="metrics">
+      <tr><td>Correct observations</td><td id="m-correct"></td></tr>
+      <tr><td>Route continuity</td><td id="m-cont"></td></tr>
+      <tr><td>Route arc precision</td><td id="m-prec"></td></tr>
+      <tr><td>Route arc recall</td><td id="m-rec"></td></tr>
+      <tr><td>Candidate miss rate</td><td id="m-miss"></td></tr>
+      <tr><td>GPS fixes / observations</td><td id="m-obs"></td></tr>
+      <tr><td>HMM chain restarts</td><td id="m-restarts"></td></tr>
+    </table>
+    <h3>Server time</h3>
+    <table class="metrics" id="timings"></table>
+    <p class="small muted">Accuracy is computed on the API server. The reference route never leaves the server
+      and is not shown here.</p>
+  </section>
+  <div id="error" class="error" hidden></div>
+</aside>
+
+<main>
+  <div id="map"></div>
+  <div id="loading" hidden><div class="spinner"></div><span>Running the pipeline…</span></div>
+  <div class="legend">
+    <div><i class="sw hmm"></i>Predicted route (HMM / Viterbi)</div>
+    <div><i class="sw clf"></i>Classifier only (toggle in layers)</div>
+    <div><i class="sw gps"></i>GPS observations</div>
+  </div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

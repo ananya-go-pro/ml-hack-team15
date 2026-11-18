@@ -25,6 +25,14 @@ pathsnap/                       shared code used by every script below (and late
   data.py                       loading cleaned trips, local metric projection
   candidates.py                 reference labelling, candidate generation, candidate features
   hmm.py                        HMM emissions/transitions + Viterbi decoding
+  raw.py                        raw trip-folder reader (prediction inputs and .route loaded separately)
+  inference.py                  MapMatcher: features -> tuned LightGBM -> HMM for one trip (no labels)
+api/
+  main.py                       FastAPI backend for Laptop 1 (/health, /trips, /predict)
+  evaluation.py                 server-side accuracy; the only code that reads .route
+ui/
+  index.html, app.js, style.css evaluator interface (Leaflet map) for Laptop 2
+  serve.py                      tiny standard-library server for the UI
   metrics.py, dataset.py        Top-1 / continuity / route metrics, cached partition builder
 hpo/
   bayes_opt_lightgbm.py         Bayesian (Optuna TPE) tuning of the selected LightGBM
@@ -102,6 +110,44 @@ Five classifiers from different families are compared with 5-fold `GroupKFold` c
 
 The primary metric is observation-level Top-1 accuracy. Macro F1, log loss, route continuity and timing are also reported. Training trips whose reference route does not match the GPS track (median distance > 50 m) are excluded from fitting; see `model_comparison/outputs/excluded_trips.json`.
 
+## Deployment (two laptops)
+
+Both laptops must be on the same network. Clone the repository on both.
+
+**Laptop 1: API.** Needs Python and `pip install -r requirements.txt`. Put the evaluation trips in one folder
+(one sub-folder per trip with `.track`, `.nodes`, `.arcs`, `.route`) and start the API:
+
+```bash
+python api/main.py --trips-dir /path/to/evaluator_test --host 0.0.0.0 --port 8000
+```
+
+Find its IP address (`ipconfig getifaddr en0` on macOS, `ipconfig` on Windows, `hostname -I` on Linux) and allow
+incoming connections on port 8000 if the firewall asks. Keep this terminal visible: every request is logged there
+step by step (files loaded, candidates, classifier, HMM, server-side accuracy, total time).
+
+**Laptop 2: UI.** Needs only Python 3 (no packages) and a browser with internet access for the map tiles.
+
+```bash
+python ui/serve.py --api http://<laptop-1-ip>:8000
+```
+
+This opens `http://localhost:8501`. The page lists the trips served by the API; click one to run it. The API address
+can also be changed in the page, or passed as `http://localhost:8501/?api=http://<ip>:8000`.
+
+**Quick check on one laptop** (uses the student-test trips, never the evaluator trips):
+
+```bash
+python api/main.py --trips-dir "../Student folder/student_test" --port 8000
+python ui/serve.py --api http://localhost:8000
+```
+
+Served on the 10 student-test trips, the API reproduces the offline results exactly (pooled Top-1 3,676 / 3,836 =
+0.9583, identical per trip), at 0.03–0.6 s per request.
+
+**What the client receives:** GPS observations, the predicted arc per observation, the predicted route geometry,
+the classifier-only route, aggregate accuracy numbers and timings. The reference route, its geometry and
+per-observation correctness stay on Laptop 1.
+
 ## Results so far (student-testing trips, 3,836 observations)
 
 | Pipeline | Top-1 | Route continuity | Worst trip |
@@ -125,16 +171,17 @@ Student-test numbers are development-stage estimates on 10 trips, so expect roug
 | 6 | Bayesian hyperparameter optimisation | done (`hpo/`) |
 | 7 | HMM and Viterbi route reconstruction | done (`pathsnap/hmm.py`, `hmm_decoding/`) |
 | 8 | Export model and artifacts | done: `models/tuned_lightgbm.joblib`, `hmm_decoding/outputs/hmm_config.json` |
-| 9 | FastAPI backend (Laptop 1) | **to do** |
-| 10 | Evaluator UI (Laptop 2) | **to do** |
-| 11 | Integration test on two laptops | **to do** |
-| 12 | Technical report | draft in `report/`; section 7 (API/UI screenshots) pending |
+| 9 | FastAPI backend (Laptop 1) | done (`api/`) |
+| 10 | Evaluator UI (Laptop 2) | done (`ui/`) |
+| 11 | Integration test | done on one laptop with student-test trips; **two-laptop rehearsal still to do** |
+| 12 | Technical report | done in `report/`; replace the section 7 development screenshots with two-laptop ones |
 
 ## Academic integrity and AI use
 
 * **Data partitions.** Only `train` (80 trips) and `student_test` (10 trips) are read by any code in this repository.
   The evaluator-testing partition is never loaded. Its ground truth must stay server-side and will only be used inside
-  the API to compute accuracy after prediction, never as model input.
+  the API (`api/evaluation.py`) to compute accuracy after prediction, never as model input, and is never sent to the UI.
+  During development the API was only ever pointed at the student-test folder.
 * **No selection on test data.** Features, models, hyperparameters and HMM parameters were all chosen using
   group-aware cross-validation / out-of-fold predictions on the training trips. Student-test results are reported
   but did not decide anything; `experiments/README.md` lists one case (E3b) where a change scored higher on
