@@ -22,3 +22,9 @@ Student folder/
 .vscode/
 .idea/
 .gemini/
+
+# PathSnap local backup
+PathSnap_processed_backup.zip
+
+# Ignore raw data folder
+data/raw/
